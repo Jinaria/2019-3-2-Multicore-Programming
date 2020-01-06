@@ -1,0 +1,109 @@
+#include <cstdio>
+#include <cstdlib>
+#include <mutex>
+#include <thread>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+// #include <stdbool.h>
+// #include <assert.h>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+// #include <condition_variable>
+// #include <mutex>
+
+
+using namespace std;
+
+#define TUPLE_SIZE      (100)
+#define KEY_SIZE        (10)
+#define THREAD_NUM      (10)
+#define FLAG(x)         ((1 << x) - 1)
+#define LIMIT_MEM       (1000000000)
+#define BLOCK_SIZE      (LIMIT_MEM / THREAD_NUM)
+#define BUFFER_SIZE     (10000000)
+
+int file_read(int fd, char *buf, size_t size, size_t start);
+int file_write(int fd, char *buf, size_t size, size_t start);
+
+
+// int cur_file_num = 0;
+// mutex m;
+// condition_variable cv;
+
+void worker(char * path, char * data, int file_num, int index){
+	int ifd = open(path, O_RDONLY);
+	if(ifd == -1){
+		printf("error: open input file\n");
+		return;
+	}
+	if(file_read(ifd, data + index * BLOCK_SIZE, BLOCK_SIZE, (THREAD_NUM * file_num + index) * BLOCK_SIZE) < 0) printf("error: read input file\n");
+	close(ifd);
+}
+
+int main(int argc, char* argv[]) {
+
+	if (argc < 3) {
+		printf("usage: ./run InputFile OutputFile\n");
+		return 0;
+	}
+
+	// open input file.
+	int input_fd;
+	input_fd = open(argv[1], O_RDONLY);
+	if (input_fd == -1) {
+		printf("error: open input file\n");
+		return 0;
+	}
+	int output_fd = open(argv[2], O_RDWR | O_CREAT | O_TRUNC, 0777);
+	if(output_fd == -1){
+		printf("error: open output file\n");
+		return 0;
+	}
+	// get size of input file.
+	size_t file_size;
+	file_size = lseek(input_fd, 0, SEEK_END);
+
+	size_t num_of_divide = file_size / BLOCK_SIZE;
+	int file_num = num_of_divide / THREAD_NUM;
+	char * data = new char[LIMIT_MEM];
+	
+	for(int i = 0; i < file_num; ++i){
+		vector<thread> workers;
+		workers.reserve(THREAD_NUM);
+		for(int j = 0; j < THREAD_NUM; ++j){
+			workers.emplace_back(worker, argv[1], data, i, j);
+		}
+		for(int j = 0; j < THREAD_NUM; ++j){
+			workers[j].join();
+		}
+		if(file_write(output_fd, data, LIMIT_MEM, i * LIMIT_MEM) < 0) printf("error: write output file\n");
+	}
+	
+	delete[] data;
+	close(input_fd);
+	close(output_fd);
+	return 0;
+}
+
+int file_read(int fd, char *buf, size_t size, size_t start){
+	for(size_t offset = 0; offset < size; ){
+		size_t ret = pread(fd, buf + offset, size - offset, start + offset);
+		if(ret < 0) return -1;
+		if(ret == 0) return 0;
+		offset = offset + ret;
+	}
+	return 1;
+}
+
+int file_write(int fd, char *buf, size_t size, size_t start){
+	for (size_t offset = 0; offset < size; ) {
+		size_t ret = pwrite(fd, buf + offset, size - offset, start + offset);
+		if (ret < 0) return -1;
+		offset = offset + ret;
+	}
+	return 0;
+}

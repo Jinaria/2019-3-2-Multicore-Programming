@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "mutex": "cpp",
+        "ostream": "cpp",
+        "*.tcc": "cpp",
+        "iostream": "cpp",
+        "condition_variable": "cpp",
+        "deque": "cpp",
+        "vector": "cpp",
+        "thread": "cpp"
+    }
+}
