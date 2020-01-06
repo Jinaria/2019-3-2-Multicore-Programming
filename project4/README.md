@@ -16,7 +16,7 @@
 
 ## Buffer pool analysis
 
-![buf_pool_struct](project4 resource/buf_pool_struct.png)
+![buf_pool_struct](resource/buf_pool_struct.png)
 
  Perform the **buffer_pool_init** function in the **srv_start** function. Allocate as much memory as the buffer pool instance and initialize each instance with the **buffer_pool_init_instance** function. In the **buffer_pool_init_instance** function, create the mutex of the instance and initialize the list, such as free list and LRU list. And **buffer_chunk_init** function initiates each chunk and completes the initialization of the instance. The **buffer_chunk_init** function allocates memory by the allocated chunk size, rounds the block size to match memory, initializes each block with the **buffer_block_init** function, and adds pages from each block to the *free list* in the buffer_pool. Then register the chunks in the buffer pool and exit the function. The **buffer_block_init** function initializes all member variables in the block. 
 
@@ -169,5 +169,5 @@ for(i = chunk->size; i--;){
 
 ## Performance analysis of new version
 
-![graph](project4 resource/graph.png)
+![graph](resource/graph.png)
  There's been little performance improvement contrary to my expectation . Time was reduced by one or two seconds from 128 gigs. As a result of thinking again, my implementation only push the initialization of one block to task_queue, so it's a bad performance because it's a big overhead. It would be better to parallelize the **buf_chunk_init** function or to make the work bigger for the queue. 
